@@ -1,0 +1,124 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=bf632ff3b23dc61a278b36c405eafca5&libraries=services"></script>
+</head>
+<body>
+    <input type="text" placeholder="키워드">
+    <div id="map" style="width:100%;height:90vh;"></div>
+</body>
+</html>
+<script>
+// 마커를 클릭하면 장소명을 표출할 인포윈도우 입니다
+var infowindow = new kakao.maps.InfoWindow({zIndex:1});
+
+const [lat, lng] = [37.2955818, 126.8372088]
+var latlng = new kakao.maps.LatLng(lat, lng);
+let map
+
+function init(keyword) {
+    map = makeMap()
+    makeNow(map)
+    search(keyword)
+}
+
+function makeMap() {
+    var map = new kakao.maps.Map(document.getElementById('map'), {
+        center: new kakao.maps.LatLng(lat, lng), // 지도의 중심좌표
+        level: 4, // 지도의 확대 레벨
+    });
+
+    return map
+}
+
+function makeNow(map) {
+    var now = new kakao.maps.Marker({
+        position: latlng,
+    });
+    
+    now.setMap(map);
+
+    const content = '<div>현재위치</div>'
+    
+    var info = new kakao.maps.InfoWindow({
+        position: latlng,
+        content: content
+    })
+    
+    info.open(map, now)
+
+    kakao.maps.event.addListener(now, 'click', function() {
+        move(now, latlng)
+    });
+}
+
+
+// 장소 검색 객체를 생성합니다
+var ps = new kakao.maps.services.Places();
+
+document.querySelector('input').addEventListener('input', function(e) {
+    search(e.target.value)
+})
+
+let markerList = []
+
+function search(keyword) {
+    clear(markerList)
+    // 키워드로 장소를 검색합니다
+    ps.keywordSearch(keyword, placesSearchCB, {
+        location: latlng,
+        sort: kakao.maps.services.SortBy.DISTANCE,
+        radius: 500,
+    });
+}
+
+
+// 키워드 검색 완료 시 호출되는 콜백함수 입니다
+function placesSearchCB (data, status, pagination) {
+    if (status === kakao.maps.services.Status.OK) {
+        markerList = []
+
+        for (var i=0; i < data.length; i++) {
+            displayMarker(data[i]);    
+        }
+    } 
+}
+
+function clear(list) {
+    for (var i = 0; i < list.length; i++) {
+        list[i].setMap(null);
+    }
+}
+
+// 지도에 마커를 표시하는 함수입니다
+function displayMarker(place) {
+    const latlng = new kakao.maps.LatLng(place.y, place.x)
+    
+    var marker = new kakao.maps.Marker({
+        map: map,
+        position: new kakao.maps.LatLng(place.y, place.x) 
+    });
+
+    markerList.push(marker)
+
+    kakao.maps.event.addListener(marker, 'click', function() {
+        move(marker, latlng, place)
+    });
+}
+
+function move(marker, latlng, place) {
+    var bounds = new kakao.maps.LatLngBounds();
+    bounds.extend(latlng);
+    map.panTo(bounds);
+
+    infowindow.setContent('<div style="padding:5px;font-size:12px;">' + place.place_name + '</div>');
+    infowindow.open(map, marker);
+}
+
+init('')
+</script>
